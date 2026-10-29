@@ -7,7 +7,7 @@ One re-runnable script that turns a fresh **Ubuntu 26.04** VM into an AI-agent w
   plus a dedicated `~/.hermes-chrome` profile with CDP on `127.0.0.1:9222` wired into Hermes
 - **Desktop:** XFCE (`xubuntu-core`) + xrdp, gnome-keyring/libsecret unlocked at RDP login
 - **Runtimes & tools:** Node.js LTS via nvm, Python via uv, gh, Docker Engine (official repo), git, ripgrep, fd, jq, tmux, htop
-- **System:** swap file, unattended security upgrades, ufw (SSH open, RDP only from given CIDRs, 9222 denied), optional Tailscale
+- **System:** swap file, unattended security upgrades, ufw (SSH open, RDP only from private networks + Tailscale, 9222 denied), optional Tailscale
 
 Third-party apt repos that don't publish a 26.04 suite yet automatically fall back to `noble`;
 the script lists which ones it did that for.
@@ -19,7 +19,7 @@ Take a VM snapshot first. Run as your normal user (not root):
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/henrik253/agent-vm-setup/main/setup-agent-vm.sh
 chmod +x setup-agent-vm.sh
-RDP_ALLOW_FROM="192.168.178.0/24 100.64.0.0/10" INSTALL_TAILSCALE=1 NEW_HOSTNAME=agent-vm1 ./setup-agent-vm.sh
+INSTALL_TAILSCALE=1 NEW_HOSTNAME=agent-vm1 ./setup-agent-vm.sh
 ```
 
 Then log out/in once (docker group, PATH) and verify:
@@ -30,7 +30,6 @@ Then log out/in once (docker group, PATH) and verify:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `RDP_ALLOW_FROM` | VM's own subnet | Space-separated CIDRs allowed to reach RDP (3389) |
 | `INSTALL_TAILSCALE` | `0` | `1` installs Tailscale (you run `sudo tailscale up`) |
 | `NEW_HOSTNAME` | – | Set the hostname during setup |
 | `SWAP_GB` | `6` | Swap file size, only if the VM has < 4 GB swap |

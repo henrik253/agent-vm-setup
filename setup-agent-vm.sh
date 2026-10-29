@@ -14,9 +14,6 @@
 #
 # Tunables (environment variables):
 #   SWAP_GB=6                 swap file size if the VM has < 4 GB swap (4–8 recommended)
-#   RDP_ALLOW_FROM="192.168.178.0/24 100.64.0.0/10"
-#                             CIDRs allowed to reach RDP (3389). Default: the VM's own
-#                             subnet, plus the Tailscale range if INSTALL_TAILSCALE=1.
 #   INSTALL_TAILSCALE=0|1     install tailscale (you still run `sudo tailscale up` yourself)
 #   NEW_HOSTNAME=agent-vm1    optionally set the hostname during setup
 #   NVM_VERSION=v0.40.3       nvm release to install
@@ -523,23 +520,14 @@ Categories=Network;WebBrowser;"
   hermes config set browser.cdp_url "http://127.0.0.1:$CDP_PORT" >/dev/null 2>&1 || true
 }
 
-detect_lan() {
-  local dev; dev=$(ip route show default | awk '{print $5; exit}')
-  ip -o -f inet route show dev "$dev" scope link | awk '{print $1; exit}'
-}
-
 setup_firewall() {
   step "ufw firewall"
-  local allow=${RDP_ALLOW_FROM:-}
-  if [[ -z $allow ]]; then
-    allow=$(detect_lan)
-    [[ $INSTALL_TAILSCALE == 1 ]] && allow="$allow 100.64.0.0/10"
-    warn "RDP_ALLOW_FROM not set; allowing RDP from auto-detected: $allow (behind NAT this is the VM network, not your LAN — set RDP_ALLOW_FROM if needed)"
-  fi
+  # RDP only from private networks (LAN, VM NAT networks) and Tailscale, never the internet
+  local allow="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10"
   sudo ufw default deny incoming
   sudo ufw default allow outgoing
   sudo ufw allow OpenSSH comment 'ssh'
-  # Drop old RDP rules so re-runs with a different RDP_ALLOW_FROM don't accumulate
+  # Drop old RDP rules so re-runs don't accumulate duplicates
   while sudo ufw status numbered | grep -q '3389/tcp'; do
     local n; n=$(sudo ufw status numbered | grep '3389/tcp' | head -n1 | sed -E 's/^\[ *([0-9]+)\].*/\1/')
     sudo ufw --force delete "$n" >/dev/null
